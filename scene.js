@@ -185,7 +185,12 @@ class Scene extends Phaser.Scene {
         break;
 
       case 6: // waiting for restart
-        if (Phaser.Input.Keyboard.JustDown(this.keys.r)) {
+      this.scoreText = this.add.text(100, 100, "press any button replay", {
+        fontSize: '32px',
+        fontWeight: 'bold',
+        color: '#000000'
+      });
+        if (Phaser.Input.Keyboard.JustDown(this.keys.r) || this.input.activePointer.isDown) {
           this.scene.start(); // 重新開始
         }
         break;
