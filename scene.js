@@ -9,6 +9,7 @@ class Scene extends Phaser.Scene {
     this.minWidth = 50;
     this.maxWidth = 250;
     this.clouds = [];
+    this.restartUIShown = false;
   }
 
   preload() {
@@ -16,14 +17,18 @@ class Scene extends Phaser.Scene {
       frameWidth: 72, frameHeight: 72
     });
     this.load.image('platform', 'assets/platform.png');
-    this.load.image('bridge', 'assets/bridge.png');
-    this.load.image('sky', 'assets/sky.png');
+    //his.load.image('bridge', 'assets/bridge.png');
+    this.load.image('sky', 'assets/sky.jpg');
     this.load.image('cloud', 'assets/cloud.png');
   }
 
   create() {
+
+    this.restartUIShown = false;
+
     // 獲取動態畫布尺寸
     const { width, height } = this.game.config;
+
 
     this.state = 0;
     this.score = 0;
@@ -68,18 +73,17 @@ class Scene extends Phaser.Scene {
     this.bridge = this.add.rectangle(0.25 * width, 0.75 * height, 5, 0, 0x654321);
     this.bridge.setOrigin(0, 0);
     this.bridge.angle = 180;
-    this.bridge.height = 0; // 加這行
+    this.bridge.height = 0;
 
 
     // 分數背景和文字
-    let scoreBackground = this.add.graphics();
-    scoreBackground.fillStyle(0x000000, 0.3);
-    scoreBackground.fillRoundedRect(0.0625 * width, 0.055 * height, 0.125 * width, 0.069 * height, 0.0139 * height);
-    this.scoreText = this.add.text(0.125 * width, 0.0903 * height, this.score, {
-      fontSize: `${0.0444 * height}px`,
-      fontWeight: 'bold',
-      color: '#000000'
+    this.scoreText = this.add.text(0.125 * width, 0.095 * height, this.score, {
+      fontFamily: '"Press Start 2P"',
+      fontSize: `${0.028 * height}px`, // 可視情況略調整
+      color: '#fefcb2ff',
+      padding: { bottom: 6 } // 防止被切
     }).setOrigin(0.5);
+
 
     this.keys = this.input.keyboard.addKeys({
       r: Phaser.Input.Keyboard.KeyCodes.R,
@@ -219,14 +223,46 @@ class Scene extends Phaser.Scene {
         break;
 
       case 6: // waiting for restart
-        this.scoreText = this.add.text(0.125 * width, 0.1389 * height, "按任意鍵重玩", {
-          fontSize: `${0.0444 * height}px`,
-          fontWeight: 'bold',
-          color: '#000000'
-        }).setOrigin(0.5);
-        if (Phaser.Input.Keyboard.JustDown(this.keys.r) || this.input.activePointer.isDown) {
-          this.time.delayedCall(100, () => {
-            this.scene.start();
+        if (!this.restartUIShown) {
+          this.restartUIShown = true;
+
+          // 視窗寬高與位置
+          const panelWidth = 0.5 * width;
+          const panelHeight = 0.3 * height;
+          const panelX = width / 2 - panelWidth / 2;
+          const panelY = height / 2 - panelHeight / 2;
+
+          // 背景視窗（亮色 + 圓角）
+          const panel = this.add.graphics();
+          panel.fillStyle(0xffffff, 0.9); // 亮色背景
+          panel.fillRoundedRect(panelX, panelY, panelWidth, panelHeight, 20);
+
+          // 顯示最終分數
+          this.add.text(width / 2, height / 2 - 0.05 * height, `最終分數：${this.score}`, {
+            fontFamily: '"Press Start 2P"', // 使用像素字體
+            padding: { top: 0, bottom: 10 }, // 加一點底部 padding
+            fontSize: '30px',
+            color: '#000000',
+            align: 'center',
+            wordWrap: { width: panelWidth - 40 }
+          }).setOrigin(0.5);
+
+          // 顯示提示文字
+          this.add.text(width / 2, height / 2 + 0.05 * height, '按任意鍵重新開始', {
+            fontFamily: '"Press Start 2P"',
+            padding: { top: 0, bottom: 10 }, // 加一點底部 padding
+            fontSize: '25px',
+            color: '#444444',
+            align: 'center',
+            wordWrap: { width: panelWidth - 40 }
+          }).setOrigin(0.5);
+
+          // 監聽重新開始事件（一次即可）
+          this.input.keyboard.once('keydown', () => {
+            this.scene.restart();
+          });
+          this.input.once('pointerdown', () => {
+            this.scene.restart();
           });
         }
         break;
