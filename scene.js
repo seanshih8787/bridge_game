@@ -8,19 +8,42 @@ class Scene extends Phaser.Scene {
     this.maxDistance = 300;
     this.minWidth = 50;
     this.maxWidth = 250;
+    this.clouds = [];
   }
 
   preload() {
     this.load.spritesheet('player', 'assets/rabbit3 - doux.png', {
       frameWidth: 72, frameHeight: 72
     });
+    this.load.image('platform', 'assets/platform.png');
+    this.load.image('bridge', 'assets/bridge.png');
+    this.load.image('sky', 'assets/sky.png');
+    this.load.image('cloud', 'assets/cloud.png');
   }
 
   create() {
+    // 獲取動態畫布尺寸
+    const { width, height } = this.game.config;
+
     this.state = 0;
     this.score = 0;
 
-    this.player = this.add.sprite(200, 520, 'player');
+    ////背景/////
+    // 天空背景，適應畫布尺寸
+    this.sky = this.add.tileSprite(0, 0, width, height, 'sky').setOrigin(0, 0);
+    // 添加雲，隨機位置和速度
+    for (let i = 0; i < 4; i++) {
+      let x = Phaser.Math.Between(0, width);
+      let y = Phaser.Math.Between(0.1 * height, 0.4 * height);
+      let cloud = this.add.sprite(x, y, 'cloud').setScale(0.5 + Math.random() * 0.5);
+      cloud.speed = 0.2 + Math.random() * 0.3;
+      this.clouds.push(cloud);
+    }
+
+
+
+    // 玩家位置，基於畫布尺寸
+    this.player = this.add.sprite(0.25 * width, 0.75 * height, 'player');
     this.player.setOrigin(1, 1);
     this.player.setScale(0.75);
     this.anims.create({
@@ -30,31 +53,37 @@ class Scene extends Phaser.Scene {
       repeat: 1
     });
 
-    this.distance = Phaser.Math.Between(this.minDistance, this.maxDistance); //隨機整數
-    let x = 200 + this.distance;
-    let width = Phaser.Math.Between(this.minWidth, this.maxWidth);
-    this.platform1 = this.add.rectangle(200, 720, 100, 200, 0x000000); // (x, y, width, height, color)
+    // 平台和橋的位置與尺寸
+    this.distance = Phaser.Math.Between(this.minDistance, this.maxDistance);
+    let platformX = 0.25 * width + this.distance;
+    let platformWidth = Phaser.Math.Between(this.minWidth, this.maxWidth);
+    this.platform1 = this.add.image(0.25 * width, height, 'platform');
     this.platform1.setOrigin(1, 1);
-    this.platform2 = this.add.rectangle(x, 720, width, 200, 0x000000);
-    this.platform2.setOrigin(0, 1);
+    this.platform1.setDisplaySize(0.125 * width, 0.25 * height);
 
-    this.bridge = this.add.rectangle(200, 520, 5, 0, 0x000000);
+    this.platform2 = this.add.image(platformX, height, 'platform');
+    this.platform2.setOrigin(0, 1);
+    this.platform2.setDisplaySize(platformWidth, 0.25 * height);
+
+    this.bridge = this.add.rectangle(0.25 * width, 0.75 * height, 5, 0, 0x654321);
     this.bridge.setOrigin(0, 0);
     this.bridge.angle = 180;
+    this.bridge.height = 0; // 加這行
 
+
+    // 分數背景和文字
     let scoreBackground = this.add.graphics();
-    scoreBackground.fillStyle(0x000000, 0.3); // 半透明
-    scoreBackground.fillRoundedRect(50, 40, 100, 50, 10); // 圓角矩形
-    this.scoreText = this.add.text(100, 65, this.score, {
-      fontSize: '32px',
+    scoreBackground.fillStyle(0x000000, 0.3);
+    scoreBackground.fillRoundedRect(0.0625 * width, 0.055 * height, 0.125 * width, 0.069 * height, 0.0139 * height);
+    this.scoreText = this.add.text(0.125 * width, 0.0903 * height, this.score, {
+      fontSize: `${0.0444 * height}px`,
       fontWeight: 'bold',
       color: '#000000'
-    });
-    this.scoreText.setOrigin(0.5);
+    }).setOrigin(0.5);
 
     this.keys = this.input.keyboard.addKeys({
       r: Phaser.Input.Keyboard.KeyCodes.R,
-      z: Phaser.Input.Keyboard.KeyCodes.Z, // 測試用
+      z: Phaser.Input.Keyboard.KeyCodes.Z,
       space: Phaser.Input.Keyboard.KeyCodes.SPACE
     });
 
@@ -62,7 +91,6 @@ class Scene extends Phaser.Scene {
     console.log("ready");
   }
 
-  //動畫
   bridgeRotate() {
     this.tweens.add({
       targets: this.bridge,
@@ -71,18 +99,17 @@ class Scene extends Phaser.Scene {
       ease: 'Linear',
       onComplete: () => {
         if (this.bridge.height >= this.distance &&
-          this.bridge.height <= this.distance + this.platform2.width) {
+          this.bridge.height <= this.distance + this.platform2.displayWidth) {
           this.state = 2;
-        }
-        else {
+        } else {
           this.state = 3;
         }
       }
     });
   }
 
-  //動畫
   Fall() {
+    const { height } = this.game.config;
     this.tweens.add({
       targets: this.bridge,
       angle: 0,
@@ -91,7 +118,7 @@ class Scene extends Phaser.Scene {
     });
     this.tweens.add({
       targets: this.player,
-      y: 720 + this.player.height,
+      y: height + this.player.height,
       duration: 300,
       ease: 'Linear',
       onComplete: () => {
@@ -100,8 +127,22 @@ class Scene extends Phaser.Scene {
     });
   }
 
-
   update() {
+    const { width, height } = this.game.config;
+
+    // 天空和雲滾動
+    this.sky.tilePositionX += 0.2;
+    this.clouds.forEach(cloud => {
+      cloud.x -= cloud.speed;
+      if (cloud.x < -cloud.displayWidth) {
+        // 回到右邊，不用等所有雲飄完
+        cloud.x = width + Phaser.Math.Between(0, 200);
+        cloud.y = Phaser.Math.Between(0.1 * height, 0.4 * height);
+        cloud.speed = 0.2 + Math.random() * 0.3;
+        cloud.setScale(0.5 + Math.random() * 0.5);
+      }
+    });
+
     switch (this.state) {
       case 0: // waiting for animation
         break;
@@ -109,13 +150,11 @@ class Scene extends Phaser.Scene {
       case 1: // build bridge
         if (this.keys.space.isDown || this.input.activePointer.isDown) {
           this.bridge.height += this.speed;
-        }
-        else if (this.bridge.height != 0) {
+        } else if (this.bridge.height != 0) {
           this.bridgeRotate();
           this.state = 0;
-
           if (this.bridge.height >= this.distance &&
-            this.bridge.height <= this.distance + this.platform2.width) {
+            this.bridge.height <= this.distance + this.platform2.displayWidth) {
             this.success = true;
           }
           else {
@@ -125,26 +164,23 @@ class Scene extends Phaser.Scene {
         break;
 
       case 2: // success, walking through the bridge
-        if (this.player.x < this.platform2.x + this.platform2.width) {
+        if (this.player.x < this.platform2.x + this.platform2.displayWidth) {
           this.player.anims.play("walk", true);
           this.player.x += this.speed;
-        }
-        else {
+        } else {
           this.player.anims.stop();
           this.player.setFrame(0);
           this.score += 1;
           this.scoreText.setText(this.score);
           this.state = 4;
         }
-
         break;
 
       case 3: // not success, fall
         if (this.player.x < this.bridge.height + this.platform1.x) {
           this.player.anims.play("walk", true);
           this.player.x += this.speed;
-        }
-        else {
+        } else {
           this.player.anims.stop();
           this.player.setFrame(0);
           this.Fall();
@@ -152,14 +188,13 @@ class Scene extends Phaser.Scene {
         }
         break;
 
-      case 4: // moving camera
-        if (this.platform2.x > 200 - this.platform2.width) {
+      case 4: // 鏡頭移動
+        if (this.player.x > 0.25 * width) {
           this.platform1.x -= this.speed;
           this.platform2.x -= this.speed;
           this.player.x -= this.speed;
           this.bridge.x -= this.speed;
-        }
-        else {
+        } else {
           this.state = 5;
         }
         break;
@@ -167,47 +202,47 @@ class Scene extends Phaser.Scene {
       case 5: // generate new platform
         this.bridge.height = 0;
         this.bridge.angle = 180;
-        this.bridge.setPosition(200, 520);
+        this.bridge.setPosition(0.25 * width, 0.75 * height);
 
-        this.platform1.width = this.platform2.width;
+        this.platform1.displayWidth = this.platform2.displayWidth;
         this.platform1.setOrigin(1, 1);
-        this.platform1.x = 200;
+        this.platform1.x = 0.25 * width;
 
-        let width = Phaser.Math.Between(this.minWidth, this.maxWidth); //隨機整數
+        const platformWidth = Phaser.Math.Between(this.minWidth, this.maxWidth);
         this.distance = Phaser.Math.Between(this.minDistance, this.maxDistance);
-        let x = this.distance + 200;
-        this.platform2.width = 0;
+        const newX = this.distance + 0.25 * width;
         this.platform2.setOrigin(0, 1);
-        this.platform2.x = x;
-        this.platform2.width = width;
+        this.platform2.x = newX;
+        this.platform2.setDisplaySize(platformWidth, 0.25 * height);
 
         this.state = 1;
         break;
 
       case 6: // waiting for restart
-      this.scoreText = this.add.text(100, 100, "press any button replay", {
-        fontSize: '32px',
-        fontWeight: 'bold',
-        color: '#000000'
-      });
+        this.scoreText = this.add.text(0.125 * width, 0.1389 * height, "按任意鍵重玩", {
+          fontSize: `${0.0444 * height}px`,
+          fontWeight: 'bold',
+          color: '#000000'
+        }).setOrigin(0.5);
         if (Phaser.Input.Keyboard.JustDown(this.keys.r) || this.input.activePointer.isDown) {
-          this.scene.start(); // 重新開始
+          this.time.delayedCall(100, () => {
+            this.scene.start();
+          });
         }
         break;
     }
 
 
-
-    //test
+    // 測試用
     if (Phaser.Input.Keyboard.JustDown(this.keys.z)) {
       console.log("state: ", this.state);
       console.log("score: ", this.score);
       console.log("[platform1]");
-      console.log("width:", this.platform1.width);
+      console.log("width:", this.platform1.displayWidth);
       console.log("position: ", this.platform1.x, this.platform1.y);
       console.log("origin: ", this.platform1.originX, this.platform1.originY);
       console.log("[platform2]");
-      console.log("width:", this.platform2.width);
+      console.log("width:", this.platform2.displayWidth);
       console.log("position: ", this.platform2.x, this.platform2.y);
       console.log("origin: ", this.platform2.originX, this.platform2.originY);
       console.log("bridge.height: ", this.bridge.height);
