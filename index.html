@@ -13,42 +13,75 @@
             align-items: center;
             justify-content: center;
             background-color: #eeeeee;
-            /* 與 Phaser 背景色一致 */
+        }
+
+        #game-container {
+            width: 100%;
+            /* 或固定寬度，如 1280px */
+            height: 100vh;
+            /* 滿高，或調整為畫面一部分 */
+            position: relative;
+        }
+
+        #start-button {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px 40px;
+            font-size: 24px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            z-index: 10;
+            /* 在遊戲上方 */
         }
 
         canvas {
             display: block;
-            /* 確保畫布無額外邊距 */
         }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser-arcade-physics.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser-arcade-physics.min.js"></script>
     <script src="scene.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
 
 <body>
+    <div id="game-container">
+        <button id="start-button">開始遊玩</button>
+    </div>
     <script>
-        var config = {
-            type: Phaser.AUTO,
-            width: 1280, // 基準寬度
-            height: 720, // 基準高度
-            backgroundColor: '#eeeeee',
-            scale: {
-                mode: Phaser.Scale.FIT, // 自動縮放以適應螢幕
-                autoCenter: Phaser.Scale.CENTER_BOTH, // 畫布居中
-                width: 1280,
-                height: 720
-            },
-            physics: {
-                default: 'arcade',
-                arcade: {
-                    debug: false,
-                    gravity: { y: 0 }
-                }
-            },
-            scene: [Scene]
-        };
-        var game = new Phaser.Game(config);
+        document.addEventListener('DOMContentLoaded', function () {
+            const startButton = document.getElementById('start-button');
+            let game; // 遊戲實例
+
+            startButton.addEventListener('click', function () {
+                var config = {
+                    type: Phaser.AUTO,
+                    width: 1280,
+                    height: 720,
+                    backgroundColor: '#eeeeee',
+                    parent: 'game-container', // 嵌入到 div
+                    scale: {
+                        mode: Phaser.Scale.FIT,
+                        autoCenter: Phaser.Scale.CENTER_BOTH,
+                        width: 1280,
+                        height: 720
+                    },
+                    physics: {
+                        default: 'arcade',
+                        arcade: {
+                            debug: false,
+                            gravity: { y: 0 }
+                        }
+                    },
+                    scene: [Scene]
+                };
+                game = new Phaser.Game(config);
+                startButton.style.display = 'none'; // 隱藏按鈕
+            });
+        });
     </script>
 </body>
 
