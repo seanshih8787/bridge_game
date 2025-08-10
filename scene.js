@@ -3,26 +3,38 @@ class Scene extends Phaser.Scene {
     super({ key: "Scene" });
     this.state = 0;
     this.score = 0;
-    this.speed = 2;
+    this.speed = 4;
     this.minDistance = 50;
     this.maxDistance = 300;
-    this.minWidth = 50;
+    this.minWidth = 70;
     this.maxWidth = 250;
     this.clouds = [];
     this.restartUIShown = false;
   }
 
   preload() {
-    this.load.spritesheet('player', 'assets/rabbit3 - doux.png', {
-      frameWidth: 72, frameHeight: 72
-    });
+    this.load.spritesheet('player', 'assets/Walk.png', { frameWidth: 48, frameHeight: 48 });
+    this.load.spritesheet('player_idle', 'assets/Idle.png', { frameWidth: 48, frameHeight: 48 });
     this.load.image('platform', 'assets/platform.png');
-    //his.load.image('bridge', 'assets/bridge.png');
     this.load.image('sky', 'assets/sky.jpg');
     this.load.image('cloud', 'assets/cloud.png');
+
+    this.load.audio('death', 'assets/death.mp3');
+    this.load.audio('impact', 'assets/impact.mp3');
+    this.load.audio('bgm', 'assets/background.mp3');
+    this.load.audio('bark', 'assets/bark.mp3');
   }
 
   create() {
+
+    //音效創建
+    this.death_sound = this.sound.add('death');
+    this.bark_sound = this.sound.add('bark');
+    this.impact_sound = this.sound.add('impact');
+    if (!this.sound.get('bgm')) {
+      this.bgm = this.sound.add('bgm', { loop: true, volume: 0.5 });
+      this.bgm.play();
+    }
 
     this.restartUIShown = false;
 
@@ -50,12 +62,18 @@ class Scene extends Phaser.Scene {
     // 玩家位置，基於畫布尺寸
     this.player = this.add.sprite(0.25 * width, 0.75 * height, 'player');
     this.player.setOrigin(1, 1);
-    this.player.setScale(0.75);
+    this.player.setScale(2);
     this.anims.create({
       key: 'walk',
-      frames: this.anims.generateFrameNumbers('player', { start: 5, end: 7 }),
+      frames: this.anims.generateFrameNumbers('player', { start: 0, end: 5 }),
       frameRate: 10,
       repeat: 1
+    });
+    this.anims.create({
+      key: 'idle',
+      frames: this.anims.generateFrameNumbers('player_idle', { start: 0, end: 5 }),
+      frameRate: 6,    // 播放速度（每秒幾格）
+      repeat: -1       // 無限循環
     });
 
     // 平台和橋的位置與尺寸
@@ -152,10 +170,18 @@ class Scene extends Phaser.Scene {
         break;
 
       case 1: // build bridge
+        if (!this.player.anims.isPlaying || this.player.anims.getName() !== 'idle') {
+          this.player.anims.play('idle', true);
+        }
         if (this.keys.space.isDown || this.input.activePointer.isDown) {
           this.bridge.height += this.speed;
-        } else if (this.bridge.height != 0) {
+        }
+        else if (this.bridge.height != 0) {
           this.bridgeRotate();
+          //音效播放
+          if (!this.impact_sound.isPlaying) {
+            this.impact_sound.play({ loop: false }); // 循環播放
+          }
           this.state = 0;
           if (this.bridge.height >= this.distance &&
             this.bridge.height <= this.distance + this.platform2.displayWidth) {
@@ -173,6 +199,9 @@ class Scene extends Phaser.Scene {
           this.player.x += this.speed;
         } else {
           this.player.anims.stop();
+          if (!this.bark_sound.isPlaying) {
+            this.bark_sound.play({ loop: false }); // 循環播放
+          }
           this.player.setFrame(0);
           this.score += 1;
           this.scoreText.setText(this.score);
@@ -187,12 +216,19 @@ class Scene extends Phaser.Scene {
         } else {
           this.player.anims.stop();
           this.player.setFrame(0);
+          //音效播放
+          if (!this.death_sound.isPlaying) {
+            this.death_sound.play({ loop: false }); // 循環播放
+          }
           this.Fall();
           this.state = 0;
         }
         break;
 
       case 4: // 鏡頭移動
+        if (!this.player.anims.isPlaying || this.player.anims.getName() !== 'idle') {
+          this.player.anims.play('idle', true);
+        }
         if (this.player.x > 0.25 * width) {
           this.platform1.x -= this.speed;
           this.platform2.x -= this.speed;
@@ -259,10 +295,14 @@ class Scene extends Phaser.Scene {
 
           // 監聽重新開始事件（一次即可）
           this.input.keyboard.once('keydown', () => {
-            this.scene.restart();
+            this.time.delayedCall(200, () => { // 延遲 200ms
+              this.scene.restart();
+            });
           });
           this.input.once('pointerdown', () => {
-            this.scene.restart();
+            this.time.delayedCall(200, () => { // 延遲 200ms
+              this.scene.restart();
+            });
           });
         }
         break;
