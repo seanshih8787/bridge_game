@@ -30,14 +30,59 @@
             transform: translate(-50%, -50%);
             padding: 20px 40px;
             font-size: 24px;
-            background-color: #4CAF50;
             color: white;
             border: none;
             cursor: pointer;
             z-index: 10;
-            /* 在遊戲上方 */
+
+            /* 漸層背景：深色+適量亮色 */
+            background: linear-gradient(145deg, #010309, #06224d, #96cad9, #97c9d5);
+
+            /* 圓角 */
+            border-radius: 12px;
+
+            /* 發光效果：柔和亮色，不會過強 */
+            box-shadow:
+                0 0 15px #97c9d5,
+                0 0 25px #96cad9,
+                0 0 35px #8bc0d2;
+
+            /* 漸層動畫 */
+            animation: glow 2s ease-in-out infinite alternate;
         }
 
+        /* 漸變發光動畫 */
+        @keyframes glow {
+            0% {
+                box-shadow:
+                    0 0 10px #8bc0d2,
+                    0 0 20px #96cad9,
+                    0 0 30px #97c9d5;
+            }
+
+            50% {
+                box-shadow:
+                    0 0 15px #8bc0d2,
+                    0 0 30px #96cad9,
+                    0 0 45px #97c9d5;
+            }
+
+            100% {
+                box-shadow:
+                    0 0 10px #8bc0d2,
+                    0 0 20px #96cad9,
+                    0 0 30px #97c9d5;
+            }
+        }
+
+        /* 滑鼠懸停效果 */
+        #start-button:hover {
+            transform: translate(-50%, -50%) scale(1.05);
+        }
+
+
+
+        /* 在遊戲上方 */
         canvas {
             display: block;
         }
