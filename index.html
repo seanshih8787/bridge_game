@@ -17,9 +17,7 @@
 
         #game-container {
             width: 100%;
-            /* 或固定寬度，如 1280px */
             height: 100vh;
-            /* 滿高，或調整為畫面一部分 */
             position: relative;
         }
 
@@ -34,55 +32,40 @@
             border: none;
             cursor: pointer;
             z-index: 10;
-
-            /* 漸層背景：深色+適量亮色 */
-            background: linear-gradient(145deg, #010309, #06224d, #96cad9, #97c9d5);
-
-            /* 圓角 */
+            background: linear-gradient(145deg, #010e2a 0%, #96cad9 100%);
             border-radius: 12px;
-
-            /* 發光效果：柔和亮色，不會過強 */
-            box-shadow:
-                0 0 15px #97c9d5,
-                0 0 25px #96cad9,
-                0 0 35px #8bc0d2;
-
-            /* 漸層動畫 */
-            animation: glow 2s ease-in-out infinite alternate;
+            box-shadow: 0 0 15px #97c9d5, 0 0 25px #96cad9, 0 0 35px #8bc0d2;
+            transition: transform 0.2s ease, background 0.3s ease, box-shadow 0.3s ease;
         }
 
-        /* 漸變發光動畫 */
-        @keyframes glow {
-            0% {
-                box-shadow:
-                    0 0 10px #8bc0d2,
-                    0 0 20px #96cad9,
-                    0 0 30px #97c9d5;
-            }
-
-            50% {
-                box-shadow:
-                    0 0 15px #8bc0d2,
-                    0 0 30px #96cad9,
-                    0 0 45px #97c9d5;
-            }
-
-            100% {
-                box-shadow:
-                    0 0 10px #8bc0d2,
-                    0 0 20px #96cad9,
-                    0 0 30px #97c9d5;
-            }
-        }
-
-        /* 滑鼠懸停效果 */
         #start-button:hover {
             transform: translate(-50%, -50%) scale(1.05);
+            background: linear-gradient(145deg, #96cad9 0%, #010e2a 100%);
+            box-shadow: 0 0 20px #97c9d5, 0 0 35px #96cad9, 0 0 50px #8bc0d2;
         }
 
+        /* 進度條 */
+        #loading-bar {
+            display: none;
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px;
+            height: 20px;
+            background-color: #222;
+            border-radius: 10px;
+            overflow: hidden;
+            z-index: 20;
+        }
 
+        #loading-progress {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #96cad9, #97c9d5);
+            transition: width 0.2s ease;
+        }
 
-        /* 在遊戲上方 */
         canvas {
             display: block;
         }
@@ -95,19 +78,28 @@
 <body>
     <div id="game-container">
         <button id="start-button">開始遊玩</button>
+        <div id="loading-bar">
+            <div id="loading-progress"></div>
+        </div>
     </div>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const startButton = document.getElementById('start-button');
+            const loadingBar = document.getElementById('loading-bar');
+            const loadingProgress = document.getElementById('loading-progress');
             let game; // 遊戲實例
 
             startButton.addEventListener('click', function () {
-                var config = {
+                startButton.style.display = 'none'; // 隱藏按鈕
+                loadingBar.style.display = 'block'; // 顯示進度條
+
+                // Phaser 遊戲配置
+                const config = {
                     type: Phaser.AUTO,
                     width: 1280,
                     height: 720,
                     backgroundColor: '#eeeeee',
-                    parent: 'game-container', // 嵌入到 div
+                    parent: 'game-container',
                     scale: {
                         mode: Phaser.Scale.FIT,
                         autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -116,15 +108,31 @@
                     },
                     physics: {
                         default: 'arcade',
-                        arcade: {
-                            debug: false,
-                            gravity: { y: 0 }
-                        }
+                        arcade: { debug: false, gravity: { y: 0 } }
                     },
-                    scene: [Scene]
+                    scene: [Scene] // 使用你原本的 Scene class
                 };
+
                 game = new Phaser.Game(config);
-                startButton.style.display = 'none'; // 隱藏按鈕
+
+                // 在 Scene preload 事件裡加入進度監聽
+                Scene.prototype.preload = (function (originalPreload) {
+                    return function () {
+                        const that = this;
+
+                        // 監聽加載進度
+                        this.load.on('progress', function (value) {
+                            loadingProgress.style.width = (value * 100) + '%';
+                        });
+
+                        this.load.on('complete', function () {
+                            loadingBar.style.display = 'none';
+                        });
+
+                        // 保留原本 preload
+                        if (originalPreload) originalPreload.call(this);
+                    };
+                })(Scene.prototype.preload);
             });
         });
     </script>
